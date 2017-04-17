@@ -1,0 +1,15 @@
+* git-status.lisp
+A common-lisp implementation of [[https://github.com/olivierverdier/zsh-git-prompt][zsh-git-prompt]].
+
+This isn't faster, or better by pretty much any metric than the original. This
+was mostly for fun, and to see if I could. I had a bit of experience with emacs
+lisp and a couple days with Common Lisp when writing this, so I welcome any
+suggestions for improvement.
+
+If you really want, you can install with [[http://www.xach.com/lisp/buildapp/][buildapp]]:
+#+begin_src sh
+buildapp --load /path/to/git-status.lisp --entry main --output /path/to/git_super_status
+#+end_src
+
+In theory, you should be able to download the prebuilt from this gist, though I
+haven't really tested it other than on my own computer.
