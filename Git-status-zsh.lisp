@@ -15,10 +15,11 @@
 divided by ONE space each.
 Note: Two consecutive spaces will be seen as
 if there were an empty string between them."
-  (loop for i = 0 then (1+ j)
-     as j = (position char string :start i)
-     collect (subseq string i j)
-     while j))
+  (loop
+     :for i := 0 :then (1+ j)
+     :as j = (position char string :start i)
+     :collect (subseq string i j)
+     :while j))
 
 (defmacro stylize (color symbol string)
   "Wrapper around format to provide colors with shell escape sequences."
@@ -52,7 +53,7 @@ if there were an empty string between them."
                       (search "Untracked files:" git-status)))
              (substring (subseq git-status start end))
              (count (+ (or (search-all "modified:" substring) 0)
-                       (or (search-all "new file:") 0))))
+                       (or (search-all "new file:" substring) 0))))
         (stylize 94 "●" count)))))
 
 (defun get-unstaged (git-status)
@@ -83,7 +84,7 @@ if there were an empty string between them."
               (concatenate 'string
                            "("
                            (stylize 92 nil branch)
-                           (get-ahead-behind git-status)
+                           ahead-behind
                            "|"
                            (if (or staged unstaged untracked)
                                (concatenate 'string staged unstaged untracked)
