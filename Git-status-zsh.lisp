@@ -71,22 +71,22 @@ if there were an empty string between them."
                                     '("status" "--long")
                                     :output out)))
          (branch (when (search "On branch" git-status)
-                   (subseq git-status 10 (position #\linefeed git-status))))
-         (untracked (when (search "Untracked files:" git-status)
-                      "…"))
-         (staged (get-staged git-status))
-         (unstaged (get-unstaged git-status))
-         (ahead-behind (get-ahead-behind git-status))
-         (output ""))
+                   (subseq git-status 10 (position #\linefeed git-status)))))
     (when branch
-      (setf output
-            (concatenate 'string
-                         "("
-                         (stylize 92 nil branch)
-                         (get-ahead-behind git-status)
-                         "|"
-                         (if (or staged unstaged untracked)
-                             (concatenate 'string staged unstaged untracked)
-                             (stylize 92 "✓" nil))
-                         ")"))
-      (format t "~a~%" output))))
+      (let ((untracked (when (search "Untracked files:" git-status)
+                         "…"))
+            (staged (get-staged git-status))
+            (unstaged (get-unstaged git-status))
+            (ahead-behind (get-ahead-behind git-status))
+            (output ""))
+        (setf output
+              (concatenate 'string
+                           "("
+                           (stylize 92 nil branch)
+                           (get-ahead-behind git-status)
+                           "|"
+                           (if (or staged unstaged untracked)
+                               (concatenate 'string staged unstaged untracked)
+                               (stylize 92 "✓" nil))
+                           ")"))
+        (format t "~a~%" output)))))
