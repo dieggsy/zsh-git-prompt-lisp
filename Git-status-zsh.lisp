@@ -1,14 +1,10 @@
 (defun search-all (substring string)
-  "Count all occurences of SUBSTRING in STRING."
-  (let ((counter 0)
-        (position 0)
-        (len (length substring)))
-    (loop
-       (let ((search (search substring string :start2 position)))
-         (when (not search)
-           (return (if (> counter 0) counter nil)))
-         (setq position (+ len search))
-         (setq counter (+ 1 counter))))))
+  (loop
+     :for i := 0 then (1+ j)
+     :for counter := 0 then (1+ counter)
+     :as j := (search substring string :start2 i)
+     :when (not j)
+     :return counter))
 
 (defun split-by-char (char string)
   "Returns a list of substrings of string
@@ -17,7 +13,7 @@ Note: Two consecutive spaces will be seen as
 if there were an empty string between them."
   (loop
      :for i := 0 :then (1+ j)
-     :as j = (position char string :start i)
+     :as j := (position char string :start i)
      :collect (subseq string i j)
      :while j))
 
@@ -50,7 +46,8 @@ if there were an empty string between them."
   (let ((start (search "Changes to be commited:" git-status)))
     (when start
       (let* ((end (or (search "Changes not staged for commit:" git-status)
-                      (search "Untracked files:" git-status)))
+                      (search "Untracked files:" git-status)
+                      (length git-status)))
              (substring (subseq git-status start end))
              (count (+ (or (search-all "modified:" substring) 0)
                        (or (search-all "new file:" substring) 0))))
