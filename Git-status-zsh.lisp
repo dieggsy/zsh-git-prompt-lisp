@@ -10,16 +10,15 @@
          (setq position (+ len search))
          (setq counter (+ 1 counter))))))
 
-(defun nums-in-string (string)
-  "Parse all numbers from STRING.
-
-Kinda hackish - no commas/periods allowed."
-  (with-input-from-string (s string)
-    (loop
-       :for num := (read s nil nil)
-       :while num
-       :when (integerp num)
-       :collect num)))
+(defun split-by-char (char string)
+  "Returns a list of substrings of string
+divided by ONE space each.
+Note: Two consecutive spaces will be seen as
+if there were an empty string between them."
+  (loop for i = 0 then (1+ j)
+     as j = (position char string :start i)
+     collect (subseq string i j)
+     while j))
 
 (defmacro stylize (color symbol string)
   "Wrapper around format to provide colors with shell escape sequences."
@@ -27,65 +26,67 @@ Kinda hackish - no commas/periods allowed."
       `(format nil "%{~C[~am%}~a~a%{~C[0m%}"  #\Esc ,color ,symbol ,string #\Esc)
       `(format nil "%{~C[~am%}~a%{~C[0m%}" #\Esc ,color (or ,symbol ,string) #\Esc)))
 
-(defun get-ahead-behind (string branch)
+(defun get-ahead-behind (git-status)
   "Count pulls ahead or behind from git status STRING in current BRANCH."
-  (let* ((branch-first (search branch string))
-         (branch-second (search branch string :from-end t))
-         (string (subseq string
-                         (+ branch-first (length branch))
-                         (- branch-second (length branch))))
-         (start (position-if #'digit-char-p string))
-         (end (position-if #'digit-char-p string :from-end t))
-         (ahead-behind (when (or start end)
-                         (nums-in-string
-                          (subseq string (1- start) (1+ end))))))
-    (when ahead-behind
-      (cond ((search "have diverged" string)
-             (format nil "%{~C[95m%}↑~d↓~d%{~C[0m%}"
-                     #\Esc (first ahead-behind) (second ahead-behind) #\Esc))
-            ((search "is behind" string)
-             (stylize 95 "↓" (first ahead-behind)))
-            ((search "is ahead" string)
-             (stylize 95 "↑" (first ahead-behind)))
-            (t "")))))
+  (when (not (search "up-to-date" git-status))
+    (let ((info-line
+           (split-by-char #\Space
+                          (second (split-by-char #\Newline git-status)))))
+      (let ((nums (loop
+                     :for num :in info-line
+                     :when (parse-integer num :junk-allowed t)
+                     :collect (parse-integer num))))
+        (cond ((search "have diverged" git-status)
+               (concatenate 'string
+                            (stylize 95 "↑" (first nums))
+                            (stylize 95 "↓" (second nums))))
+              ((search "is ahead" git-status)
+               (stylize 95 "↑" (first nums)))
+              ((search "is behind" git-status)
+               (stylize 95 "↓" (first nums))))))))
+
+(defun get-staged (git-status)
+  (let ((start (search "Changes to be commited:" git-status)))
+    (when start
+      (let* ((end (or (search "Changes not staged for commit:" git-status)
+                      (search "Untracked files:" git-status)))
+             (substring (subseq git-status start end))
+             (count (+ (or (search-all "modified:" substring) 0)
+                       (or (search-all "new file:") 0))))
+        (stylize 94 "●" count)))))
+
+(defun get-unstaged (git-status)
+  (let ((start (search "Changes not staged for commit" git-status)))
+    (when start
+      (let* ((end (or (search "Untracked files:" git-status)
+                      (length git-status)))
+             (substring (subseq git-status start end))
+             (count (search-all "modified:" substring)))
+        (stylize 91 "✚" count)))))
 
 (defun main (argv)
   "Produce a summary of current repo status."
-  (let* ((status-info (with-output-to-string (out)
-                        (run-program "/usr/bin/git"
-                                     '("status" "--long")
-                                     :output out)))
-         (branch (when (search "On branch" status-info)
-                   (subseq status-info 10
-                           (search (format nil "~C" #\linefeed) status-info))))
-         (len (length status-info))
-         (untracked (search "Untracked files:" status-info))
-         (m-ind (search "Changes not staged for commit:" status-info))
-         (s-ind (search "Changes to be committed:" status-info))
-         (m-str (when m-ind (subseq status-info m-ind len)))
-         (modified (when m-str (search-all "modified:" m-str)))
-         (s-str (when s-ind (subseq status-info 0 (or m-ind len))))
-         (staged (when s-str
-                   (or (search-all "modified:" s-str)
-                       (search-all "new file:" s-str))))
+  (let* ((git-status (with-output-to-string (out)
+                       (run-program "/usr/bin/git"
+                                    '("status" "--long")
+                                    :output out)))
+         (branch (when (search "On branch" git-status)
+                   (subseq git-status 10 (position #\linefeed git-status))))
+         (untracked (when (search "Untracked files:" git-status)
+                      "…"))
+         (staged (get-staged git-status))
+         (unstaged (get-unstaged git-status))
+         (ahead-behind (get-ahead-behind git-status))
          (output ""))
     (when branch
-      (setq output
+      (setf output
             (concatenate 'string
                          "("
                          (stylize 92 nil branch)
-                         (get-ahead-behind status-info branch)
+                         (get-ahead-behind git-status)
                          "|"
-                         output))
-      (if (not (or staged modified untracked))
-          (setq output (concatenate 'string output (stylize 92 "✓" nil)))
-          (progn
-            (when staged
-              (setq output
-                    (concatenate 'string output (stylize 94 "●" staged))))
-            (when modified
-              (setq output
-                    (concatenate 'string output (stylize 91 "✚" modified))))
-            (when untracked
-              (setq output (concatenate 'string output "…")))))
-      (format t (concatenate 'string output ")~%") #\Esc))))
+                         (if (or staged unstaged untracked)
+                             (concatenate 'string staged unstaged untracked)
+                             (stylize 92 "✓" nil))
+                         ")"))
+      (format t "~a~%" output))))
