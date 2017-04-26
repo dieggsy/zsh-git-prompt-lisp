@@ -43,8 +43,7 @@
                             (subseq first-line
                                     (+ 7 behind)
                                     (search "]" first-line))))))))
-"## master...origin/master [ahead 1, behind 1]
-"
+
 (defun get-branch (git-status)
   (stylize 92 nil (subseq git-status
                           (+ (search "## " git-status) 3)
