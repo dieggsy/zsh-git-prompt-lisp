@@ -45,9 +45,16 @@
                                     (search "]" first-line))))))))
 
 (defun get-branch (git-status)
-  (stylize 92 nil (subseq git-status
-                          (+ (search "## " git-status) 3)
-                          (search "..." git-status))))
+  (if (not (search "no branch" git-status))
+      (stylize 92 nil (subseq git-status
+                              (+ (search "## " git-status) 3)
+                              (search "..." git-status)))
+
+      (let ((commit (with-output-to-string (out)
+                      (run-program "/usr/bin/git"
+                                   '("rev-parse" "--short" "HEAD")
+                                   :output out))))
+        (stylize 92 nil (subseq commit 0 (1- (length commit)))))))
 
 (defun get-staged (git-status)
   (let ((num (+ (search-all "A  " git-status)
