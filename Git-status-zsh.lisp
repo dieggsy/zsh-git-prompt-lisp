@@ -32,7 +32,9 @@
                       (run-program "/usr/bin/git"
                                    '("rev-parse" "--short" "HEAD")
                                    :output out))))
-        (stylize 92 nil (subseq commit 0 (1- (length commit)))))))
+        (stylize 92 nil (concatenate 'string
+                                     ":"
+                                     (subseq commit 0 (1- (length commit))))))))
 
 (defun get-ahead-behind (git-status)
   (let* ((first-line (subseq git-status 0 (position #\newline git-status)))
@@ -74,6 +76,18 @@
     (when (/= num 0)
       (stylize 91 "✚" num))))
 
+(defun get-conflicts (git-status)
+  (let ((num (+ (search-all git-status
+                            (format nil "~%DD ")
+                            (format nil "~%AU ")
+                            (format nil "~%UD ")
+                            (format nil "~%UA ")
+                            (format nil "~%DU ")
+                            (format nil "~%AA ")
+                            (format nil "~%UU ")))))
+    (when (/= num 0)
+      (stylize 91 "✖" num))))
+
 (defun get-dirty (git-status)
   (when (search (format nil "~%?? ") git-status)
     "…"))
@@ -85,6 +99,7 @@
       (let ((branch (get-branch status))
             (ahead-behind (get-ahead-behind status))
             (staged (get-staged status))
+            (conflicts (get-conflicts status))
             (modified (get-modified status))
             (dirty (get-dirty status)))
         (format t
@@ -94,9 +109,10 @@
                              branch
                              ahead-behind
                              "|"
-                             (if (or staged modified dirty)
+                             (if (or staged conflicts modified dirty)
                                  (concatenate 'string
                                               staged
+                                              conflicts
                                               modified
                                               dirty)
                                  (stylize 92 "✓" nil))
