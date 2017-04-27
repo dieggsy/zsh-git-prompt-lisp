@@ -4,20 +4,35 @@
                  (concatenate 'list '("status") args)
                  :output out)))
 
-(defun search-all (substring string)
+(defun search-all (string &rest substrings)
   "Find all occurences of SUBSTRING in STRING"
-  (loop
-    :for i := 0 then (1+ j)
-    :for counter := 0 then (1+ counter)
-    :as j := (search substring string :start2 i)
-    :when (not j)
-      :return counter))
+  (let ((count 0))
+    (dolist (substring substrings)
+      (incf count (loop
+                     :for i := 0 then (1+ j)
+                     :for counter := 0 then (1+ counter)
+                     :as j := (search substring string :start2 i)
+                     :when (not j)
+                     :return counter)))
+    count))
 
 (defmacro stylize (color symbol string)
   "Wrapper around format to provide colors with shell escape sequences."
   (if (and symbol string)
       `(format nil "%{~C[~am%}~a~a%{~C[0m%}"  #\Esc ,color ,symbol ,string #\Esc)
       `(format nil "%{~C[~am%}~a%{~C[0m%}" #\Esc ,color (or ,symbol ,string) #\Esc)))
+
+(defun get-branch (git-status)
+  (if (not (search "no branch" git-status))
+      (stylize 92 nil (subseq git-status
+                              (+ (search "## " git-status) 3)
+                              (search "..." git-status)))
+
+      (let ((commit (with-output-to-string (out)
+                      (run-program "/usr/bin/git"
+                                   '("rev-parse" "--short" "HEAD")
+                                   :output out))))
+        (stylize 92 nil (subseq commit 0 (1- (length commit)))))))
 
 (defun get-ahead-behind (git-status)
   (let* ((first-line (subseq git-status 0 (position #\newline git-status)))
@@ -44,33 +59,23 @@
                                     (+ 7 behind)
                                     (search "]" first-line))))))))
 
-(defun get-branch (git-status)
-  (if (not (search "no branch" git-status))
-      (stylize 92 nil (subseq git-status
-                              (+ (search "## " git-status) 3)
-                              (search "..." git-status)))
-
-      (let ((commit (with-output-to-string (out)
-                      (run-program "/usr/bin/git"
-                                   '("rev-parse" "--short" "HEAD")
-                                   :output out))))
-        (stylize 92 nil (subseq commit 0 (1- (length commit)))))))
-
 (defun get-staged (git-status)
-  (let ((num (+ (search-all "A  " git-status)
-                (search-all "M  " git-status))))
+  (let ((num (+ (search-all git-status
+                            (format nil "~%A  ")
+                            (format nil "~%M  ")))))
     (when (/= num 0)
       (stylize 94 "●" num))))
 
 (defun get-modified (git-status)
-  (let ((num (+ (search-all " M " git-status)
-                (search-all "AM " git-status)
-                (search-all " T " git-status))))
+  (let ((num (+ (search-all git-status
+                            (format nil "~% M ")
+                            (format nil "~%AM ")
+                            (format nil "~% T ")))))
     (when (/= num 0)
       (stylize 91 "✚" num))))
 
 (defun get-dirty (git-status)
-  (when (search "?? " git-status)
+  (when (search (format nil "~%?? ") git-status)
     "…"))
 
 (defun main (argv)
