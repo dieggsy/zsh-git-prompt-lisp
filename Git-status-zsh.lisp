@@ -42,24 +42,20 @@
          (behind (search "behind" first-line)))
     (cond ((and ahead behind)
            (concatenate 'string
-                        (stylize 95 "↑" (parse-integer
-                                         (subseq first-line
-                                                 (+ 6 ahead)
-                                                 (search "," first-line))))
-                        (stylize 95 "↓" (parse-integer
-                                         (subseq first-line
-                                                 (+ 7 behind)
-                                                 (search "]" first-line))))))
+                        (stylize 95 "↑" (subseq first-line
+                                                (+ 6 ahead)
+                                                (search "," first-line)))
+                        (stylize 95 "↓" (subseq first-line
+                                                (+ 7 behind)
+                                                (search "]" first-line)))))
           (ahead
-           (stylize 95 "↑" (parse-integer
-                            (subseq first-line
-                                    (+ 6 ahead)
-                                    (search "]" first-line)))))
+           (stylize 95 "↑" (subseq first-line
+                                   (+ 6 ahead)
+                                   (search "]" first-line))))
           (behind
-           (stylize 95 "↓" (parse-integer
-                            (subseq first-line
-                                    (+ 7 behind)
-                                    (search "]" first-line))))))))
+           (stylize 95 "↓" (subseq first-line
+                                   (+ 7 behind)
+                                   (search "]" first-line)))))))
 
 (defun get-staged (git-status)
   (let ((num (+ (search-all git-status
