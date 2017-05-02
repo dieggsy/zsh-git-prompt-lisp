@@ -67,6 +67,7 @@
 (defun get-modified (git-status)
   (let ((num (+ (search-all git-status
                             (format nil "~% M ")
+                            (format nil "~% D ")
                             (format nil "~%AM ")
                             (format nil "~% T ")))))
     (when (/= num 0)
