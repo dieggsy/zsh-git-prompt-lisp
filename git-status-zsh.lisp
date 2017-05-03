@@ -23,18 +23,22 @@
       `(format nil "%{~C[~am%}~a%{~C[0m%}" #\Esc ,color (or ,symbol ,string) #\Esc)))
 
 (defun get-branch (git-status)
-  (if (not (search "no branch" git-status))
-      (stylize 92 nil (subseq git-status
-                              (+ (search "## " git-status) 3)
-                              (search "..." git-status)))
-
-      (let ((commit (with-output-to-string (out)
-                      (run-program "/usr/bin/git"
-                                   '("rev-parse" "--short" "HEAD")
-                                   :output out))))
-        (stylize 92 nil (concatenate 'string
-                                     ":"
-                                     (subseq commit 0 (1- (length commit))))))))
+  (cond ((search "no branch" git-status)
+         (let ((commit (with-output-to-string (out)
+                         (run-program "/usr/bin/git"
+                                      '("rev-parse" "--short" "HEAD")
+                                      :output out))))
+           (stylize 92 nil (concatenate 'string
+                                        ":"
+                                        (subseq commit 0 (1- (length commit)))))))
+        ((search "Initial commit" git-status)
+         (stylize 92 nil (subseq git-status
+                                 (+ (search "Initial" git-status) 18)
+                                 (position #\newline git-status))))
+        (t
+         (stylize 92 nil (subseq git-status
+                                 (+ (search "## " git-status) 3)
+                                 (search "..." git-status))))))
 
 (defun get-ahead-behind (git-status)
   (let* ((first-line (subseq git-status 0 (position #\newline git-status)))
