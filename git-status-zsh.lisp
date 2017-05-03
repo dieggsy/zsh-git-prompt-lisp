@@ -38,7 +38,8 @@
         (t
          (stylize 92 nil (subseq git-status
                                  (+ (search "## " git-status) 3)
-                                 (search "..." git-status))))))
+                                 (or (search "..." git-status)
+                                     (position #\newline git-status)))))))
 
 (defun get-ahead-behind (git-status)
   (let* ((first-line (subseq git-status 0 (position #\newline git-status)))
