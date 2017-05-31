@@ -4,23 +4,11 @@
                  (concatenate 'list '("status") args)
                  :output out)))
 
-(defun search-all (string &rest substrings)
-  "Find all occurences of SUBSTRING in STRING"
-  (let ((count 0))
-    (dolist (substring substrings)
-      (incf count (loop
-                     :for i := 0 then (1+ j)
-                     :for counter := 0 then (1+ counter)
-                     :as j := (search substring string :start2 i)
-                     :when (not j)
-                     :return counter)))
-    count))
-
 (defmacro stylize (color symbol string)
   "Wrapper around format to provide colors with shell escape sequences."
   (if (and symbol string)
       `(format nil "%{~C[~am%}~a~a%{~C[0m%}"  #\Esc ,color ,symbol ,string #\Esc)
-      `(format nil "%{~C[~am%}~a%{~C[0m%}" #\Esc ,color (or ,symbol ,string) #\Esc)))
+      `(format nil "%{~C[~am%}~a%{~C[0m%}" #\Esc ,color ,(or symbol string) #\Esc)))
 
 (defun get-branch (git-status)
   (cond ((search "no branch" git-status)
@@ -29,80 +17,40 @@
                                       '("rev-parse" "--short" "HEAD")
                                       :output out))))
            (stylize 92 nil (concatenate 'string
-                                        ":"
-                                        (subseq commit 0 (1- (length commit)))))))
-        ((search "Initial commit" git-status)
-         (stylize 92 nil (subseq git-status
-                                 (+ (search "Initial" git-status) 18)
-                                 (position #\newline git-status))))
-        (t
-         (stylize 92 nil (subseq git-status
-                                 (+ (search "## " git-status) 3)
-                                 (or (search "..." git-status)
-                                     (position #\newline git-status)))))))
+                                      ":"
+                                      (subseq commit 0 (1- (length commit)))))))
+        (t (cl-ppcre:register-groups-bind (branch)
+               ("## (?:Initial commit on )?(.*)(?:\\.\\.\\.)" git-status)
+             (stylize 92 nil branch)))))
 
 (defun get-ahead-behind (git-status)
-  (let* ((first-line (subseq git-status 0 (position #\newline git-status)))
-         (ahead (search "ahead" first-line))
-         (behind (search "behind" first-line)))
-    (cond ((and ahead behind)
-           (concatenate 'string
-                        (stylize 95 "↑" (subseq first-line
-                                                (+ 6 ahead)
-                                                (search "," first-line)))
-                        (stylize 95 "↓" (subseq first-line
-                                                (+ 7 behind)
-                                                (search "]" first-line)))))
-          (ahead
-           (stylize 95 "↑" (subseq first-line
-                                   (+ 6 ahead)
-                                   (search "]" first-line))))
-          (behind
-           (stylize 95 "↓" (subseq first-line
-                                   (+ 7 behind)
-                                   (search "]" first-line)))))))
+  (cl-ppcre:register-groups-bind (ahead behind)
+      ("\\[(?:ahead (\\d))?(?:, )?(?:behind (\\d))?\\]" git-status)
+    (concatenate 'string
+                 (when ahead (stylize 95 "↑" ahead))
+                 (when behind (stylize 95 "↓" behind)))))
 
-(defun get-staged (git-status)
-  (let ((num (+ (search-all git-status
-                            (format nil "~%A  ")
-                            (format nil "~%M  ")))))
-    (when (/= num 0)
-      (stylize 94 "●" num))))
-
-(defun get-modified (git-status)
-  (let ((num (+ (search-all git-status
-                            (format nil "~% M ")
-                            (format nil "~% D ")
-                            (format nil "~%AM ")
-                            (format nil "~% T ")))))
-    (when (/= num 0)
-      (stylize 91 "✚" num))))
-
-(defun get-conflicts (git-status)
-  (let ((num (+ (search-all git-status
-                            (format nil "~%DD ")
-                            (format nil "~%AU ")
-                            (format nil "~%UD ")
-                            (format nil "~%UA ")
-                            (format nil "~%DU ")
-                            (format nil "~%AA ")
-                            (format nil "~%UU ")))))
-    (when (/= num 0)
-      (stylize 91 "✖" num))))
+(defmacro get-smc (git-status color symbol regex)
+  "Get [S]taged, [M]odified, or [C]onflicts"
+  `(let ((num (+ (length (cl-ppcre:all-matches-as-strings
+                          ,regex
+                          ,git-status)))))
+     (when (/= num 0)
+       (stylize ,color ,symbol num))))
 
 (defun get-dirty (git-status)
-  (when (search (format nil "~%?? ") git-status)
-    "…"))
+  (when (cl-ppcre:scan "\\n?? " git-status) "…"))
 
 (defun main (argv)
+  (declare (ignore argv))
   "Produce a summary of current repo status."
   (let ((status (git-status "--porcelain" "-b")))
     (when (not (search "fatal" status))
       (let ((branch (get-branch status))
             (ahead-behind (get-ahead-behind status))
-            (staged (get-staged status))
-            (conflicts (get-conflicts status))
-            (modified (get-modified status))
+            (staged (get-smc status 94 "●" "\\n(A|M)"))
+            (conflicts (get-smc status 91 "✖" "\\n(DD |AU |UD |UA |DU |AA |UU )"))
+            (modified (get-smc status 91 "✚" "\\n( M | D |AM | T )"))
             (dirty (get-dirty status)))
         (format t
                 "~a~%"
