@@ -1,0 +1,13 @@
+(:CREATION-TIME #.(COERCE "2017-05-30T22:38:42Z" 'BASE-STRING)
+ :REQUESTED-SYSTEMS ("cl-ppcre") :LISP-INFO
+ (:MACHINE-INSTANCE "Ragnarok" :MACHINE-TYPE #.(COERCE "X86-64" 'BASE-STRING)
+  :MACHINE-VERSION "Intel(R) Core(TM) i5-4288U CPU @ 2.60GHz"
+  :LISP-IMPLEMENTATION-TYPE #.(COERCE "SBCL" 'BASE-STRING)
+  :LISP-IMPLEMENTATION-VERSION #.(COERCE "1.3.17.88-a40115dc3" 'BASE-STRING))
+ :QUICKLISP-INFO
+ (:HOME #.(COERCE "/home/diego/quicklisp/" 'BASE-STRING)
+  :LOCAL-PROJECT-DIRECTORIES
+  (#.(COERCE "/home/diego/quicklisp/local-projects/" 'BASE-STRING)) :DISTS
+  ((:NAME "quicklisp" :DIST-URL
+    "http://beta.quicklisp.org/dist/quicklisp/2017-05-16/distinfo.txt" :VERSION
+    "2017-05-16"))))
