@@ -3,9 +3,8 @@ A common-lisp implementation of [[https://github.com/olivierverdier/zsh-git-prom
 
 This isn't faster, or better by pretty much any metric than the original. (It
 migh tbe faster than the python implementation?). In any case this was mostly
-for fun and practice, and to see if I could. I had a bit of experience with
-emacs lisp and a couple days with Common Lisp when writing this, so I welcome
-any suggestions for improvement.
+for fun and practice, and to see if I could. I welcome any suggestions for
+improvement.
 
 *Note:* I tried to use no external packages in this implementation. You can take
 a look at the ~cl-ppcre~ branch for an implementation with regular expressions
