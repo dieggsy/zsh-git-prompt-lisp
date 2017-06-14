@@ -2,7 +2,7 @@
   (with-output-to-string (out)
     (run-program "/usr/bin/git"
                  (concatenate 'list '("status") args)
-                 :output out)))
+                 :output out :directory *default-pathname-defaults*)))
 
 (defmacro stylize (color symbol string)
   "Wrapper around format to provide colors with shell escape sequences."
@@ -15,7 +15,7 @@
          (let ((commit (with-output-to-string (out)
                          (run-program "/usr/bin/git"
                                       '("rev-parse" "--short" "HEAD")
-                                      :output out))))
+                                      :output out :directory *default-pathname-defaults*))))
            (stylize 92 nil (concatenate 'string
                                       ":"
                                       (subseq commit 0 (1- (length commit)))))))
