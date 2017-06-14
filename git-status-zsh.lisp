@@ -39,7 +39,7 @@
        (stylize ,color ,symbol num))))
 
 (defun get-dirty (git-status)
-  (when (cl-ppcre:scan "\\n?? " git-status) "…"))
+  (when (cl-ppcre:scan "\\n\\?\\? " git-status) "…"))
 
 (defun main (argv)
   (declare (ignore argv))
