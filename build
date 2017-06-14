@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+buildapp --load deps/bundle.lisp \
+         --load-system cl-ppcre \
+         --load git-status-zsh.lisp \
+         --entry main \
+         --output ~/bin/git_status_ppcre
